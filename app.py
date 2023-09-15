@@ -42,25 +42,34 @@ def preprocess_dataset(X, y):
 
     return X_balanced, y_balanced
 
-# Load the dataset (CSV file) containing features and results
-dataset_filename = "phish.csv" 
-X, y = load_dataset(dataset_filename)
 
-# Preprocess the dataset
-X, y = preprocess_dataset(X, y)
+st.set_page_config(page_title="Phishing Predictor", page_icon=":shield:")
 
-classifier = KNeighborsClassifier(n_neighbors=3)
-classifier.fit(X, y)
+@st.cache_resource
+def load_model():
+    # Load the dataset (CSV file) containing features and results
+    dataset_filename = "phish.csv" 
+    X, y = load_dataset(dataset_filename)
 
+    # Preprocess the dataset
+    X, y = preprocess_dataset(X, y)
 
+    classifier = KNeighborsClassifier(n_neighbors=3)
+    classifier.fit(X, y)
+    return classifier
+classifier=load_model()
 
-df= pd.read_csv("phishing_site_urls.csv")
-df = df.drop_duplicates()
-X_1=df.URL
-y_1=df.Label
+@st.cache_resource
+def load_model1():
+    df= pd.read_csv("phishing_site_urls.csv")
+    df = df.drop_duplicates()
+    X_1=df.URL
+    y_1=df.Label
 
-pipeline_ls = make_pipeline(CountVectorizer(tokenizer = RegexpTokenizer(r'\w+|\@+').tokenize), LogisticRegression())
-pipeline_ls.fit(X_1,y_1)
+    pipeline_ls = make_pipeline(CountVectorizer(tokenizer = RegexpTokenizer(r'\w+|\@+').tokenize), LogisticRegression())
+    pipeline_ls.fit(X_1,y_1)
+    return pipeline_ls
+pipeline_ls=load_model1()
 
 # Function to check SFH (Server Form Handler)
 def check_sfh(soup):
@@ -134,7 +143,7 @@ def check_request_urls(soup):
             return 1
         elif 22 <= request_url_percentage < 65:
             return 0
-    return -1
+    return 0
 
 
 # Function to check URL length
@@ -199,7 +208,6 @@ def analyze_website(url):
 
 
 
-st.set_page_config(page_title="Phishing Predictor", page_icon=":shield:")
 st.title("Phishing Predictor")
 st.write("Detect suspicious websites to stay safe online")
 nav = st.sidebar.radio("Navigation", ["Home", "Prediction", "About Us"])
@@ -239,7 +247,7 @@ if nav == "Prediction":
         elif final_prediction == "Suspicious":
             st.warning("This website is suspicious!")
         else:
-            st.error("Error: Request Failed | Unable to make a prediction")
+            st.error("Error: Request Failed | Unable to make a prediction | Please enter valid URL")
 
 
 if nav == "About Us":
