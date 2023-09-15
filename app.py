@@ -66,7 +66,7 @@ def load_model1():
     X_1=df.URL
     y_1=df.Label
 
-    pipeline_ls = make_pipeline(CountVectorizer(tokenizer = RegexpTokenizer(r'\w+|\@+').tokenize), LogisticRegression())
+    pipeline_ls = make_pipeline(CountVectorizer(tokenizer = RegexpTokenizer(r'\w+').tokenize), LogisticRegression())
     pipeline_ls.fit(X_1,y_1)
     return pipeline_ls
 pipeline_ls=load_model1()
@@ -82,12 +82,12 @@ def check_sfh(soup):
     for form in forms:
         action = form.get('action', '').strip()
 
-        # Check if the action attribute is empty or starts with 'http://' or 'https://'
-        if not action or action.startswith(('http://', 'https://')):
+        # Check if the action attribute is empty
+        if not action:
             return -1
         
 
-    return 1
+    return 0
 
 
 # Function to check for Pop-up Windows with Forms
@@ -121,7 +121,7 @@ def check_ssl_final_state(url):
             # Calculate the age in years
             age_in_years = (datetime.now() - not_before).days / 365
 
-            if age_in_years >= 2:
+            if age_in_years >= 0.5:
                 return 1  # Certificate age is more than 2 years
             else:
                 return 0  # Certificate age is less than 2 years
@@ -161,7 +161,7 @@ def check_age_of_domain(url):
         domain_info = whois.whois(domain)
         creation_date = domain_info.creation_date
         if creation_date and (datetime.now() - creation_date).days < 365:
-            return -1
+            return 0
     except Exception as e:
         pass
     return 1
@@ -206,8 +206,6 @@ def analyze_website(url):
         return [-1] * 7  # Return -1 for all features if an exception occurs
 
 
-
-
 st.title("Phishing Predictor")
 st.write("Detect suspicious websites to stay safe online")
 nav = st.sidebar.radio("Navigation", ["Home", "Prediction", "About Us"])
@@ -218,6 +216,7 @@ if nav == "Home":
     
 if nav == "Prediction":
     st.header("Website URL Prediction")
+    
 
     input_url = st.text_input("Enter the URL to check for phishing")
 
