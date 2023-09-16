@@ -15,6 +15,9 @@ from nltk.tokenize import RegexpTokenizer
 from sklearn.feature_extraction.text import CountVectorizer  
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
+import numpy as np
+
+top_safe_site=['https://www.google.com/','https://www.flipkart.com/','https://www.facebook.com/','https://web.whatsapp.com/','https://www.instagram.com/','https://www.reddit.com/','https://www.amazon.in/']
 # Load the dataset (CSV file) containing features and results
 def load_dataset(filename):
     dataset = pd.read_csv(filename)
@@ -22,7 +25,10 @@ def load_dataset(filename):
     y = dataset.iloc[:, -1]   # Result column
     return X, y
 
-# Preprocess the dataset
+from sklearn.preprocessing import StandardScaler
+import pandas as pd
+from sklearn.utils import shuffle
+
 def preprocess_dataset(X, y):
     # Standardize features
     scaler = StandardScaler()
@@ -32,13 +38,23 @@ def preprocess_dataset(X, y):
     X_positive = X[y == 1]
     X_negative = X[y == 0]
 
-    # Upsample the positive class to match the size of the negative class
-    if len(X_positive) < len(X_negative):
-        X_positive = shuffle(X_positive, random_state=42, n_samples=len(X_negative))
+    # Determine the size of the majority class
+    max_class_size = max(len(X_positive), len(X_negative))
+
+
+
+# Upsample each class to match the size of the majority class
+    if len(X_positive) < max_class_size:
+        indices = np.random.choice(len(X_positive), max_class_size, replace=True)
+        X_positive = X_positive[indices]
+    if len(X_negative) < max_class_size:
+        indices = np.random.choice(len(X_negative), max_class_size, replace=True)
+        X_negative = X_negative[indices]
+
 
     # Concatenate the balanced datasets
     X_balanced = pd.concat([pd.DataFrame(X_positive), pd.DataFrame(X_negative)])
-    y_balanced = pd.concat([pd.Series([1] * len(X_positive)), pd.Series([0] * len(X_negative))])
+    y_balanced = pd.concat([pd.Series([1] * max_class_size), pd.Series([-1] * max_class_size)])
 
     return X_balanced, y_balanced
 
@@ -66,7 +82,7 @@ def load_model1():
     X_1=df.URL
     y_1=df.Label
 
-    pipeline_ls = make_pipeline(CountVectorizer(tokenizer = RegexpTokenizer(r'\w+').tokenize), LogisticRegression())
+    pipeline_ls = make_pipeline(CountVectorizer(tokenizer = RegexpTokenizer(r'[A-Za-z]+').tokenize,stop_words='english'), LogisticRegression(max_iter=507214))
     pipeline_ls.fit(X_1,y_1)
     return pipeline_ls
 pipeline_ls=load_model1()
@@ -83,7 +99,7 @@ def check_sfh(soup):
         action = form.get('action', '').strip()
 
         # Check if the action attribute is empty
-        if not action:
+        if not action or action.startswith(('http://', 'https://')):
             return -1
         
 
@@ -122,9 +138,9 @@ def check_ssl_final_state(url):
             age_in_years = (datetime.now() - not_before).days / 365
 
             if age_in_years >= 0.5:
-                return 1  # Certificate age is more than 2 years
+                return 1 
             else:
-                return 0  # Certificate age is less than 2 years
+                return 0 
         else:
             return 0  # SSL not found or other issues
     except Exception as e:
@@ -213,33 +229,67 @@ if nav == "Home":
     # Display an image and welcome message
     st.image("phisher.jpg", width=800)
     st.write("Welcome to our phishing detection tool, created by The KingPhishers!")
+    hide_st_style = """ <style>#MainMenu {visibility: hidden;}footer {visibility: hidden;} header {visibility: hidden;}</style>"""
+    st.markdown(hide_st_style, unsafe_allow_html=True)
     
 if nav == "Prediction":
     st.header("Website URL Prediction")
-    
+    hide_st_style = """ <style>#MainMenu {visibility: hidden;}footer {visibility: hidden;} header {visibility: hidden;}</style>"""
+    st.markdown(hide_st_style, unsafe_allow_html=True)   
 
     input_url = st.text_input("Enter the URL to check for phishing")
 
     if st.button("Check"):
         st.info("Checking... Please wait")  # Provide feedback while checking
 
-        features = analyze_website(input_url)
-        are_all_minus_1 = all(x == -1 for x in features)
-        if are_all_minus_1:
-            final_prediction=""
-        else:
-            weight_classifier = 0.7 
-            weight_pipeline_ls = 0.3 
+        safe=False
+        for site in top_safe_site:
+            if input_url.startswith(site):
+                safe=True
+                break
 
-            pred_classifier = classifier.predict([features])
-            pred_pipeline_ls = pipeline_ls.predict([input_url])
-            weighted_average_pred = (weight_classifier * int(pred_classifier[0]) + weight_pipeline_ls * int(pred_pipeline_ls[0])) / (weight_classifier + weight_pipeline_ls)
-            threshold = -0.3
-        
-            if weighted_average_pred > threshold:
-                final_prediction = "Safe"
+        if safe:
+            final_prediction="Safe"
+#            ps=1
+        else:
+            features = analyze_website(input_url)
+            are_all_minus_1 = all(x == -1 for x in features)
+            if are_all_minus_1:
+                final_prediction=""
+#               ps=''
             else:
-                final_prediction = "Suspicious"
+                weight_classifier = 0.7 
+                weight_pipeline_ls = 0.3 
+
+                pred_classifier = classifier.predict([features])
+                pred_pipeline_ls = pipeline_ls.predict([input_url])
+                weighted_average_pred = (weight_classifier * int(pred_classifier[0]) + weight_pipeline_ls * int(pred_pipeline_ls[0])) / (weight_classifier + weight_pipeline_ls)
+                threshold = -0.3
+#                ps=weighted_average_pred
+        
+                if weighted_average_pred > threshold:
+                    final_prediction = "Safe"
+                else:
+                    final_prediction = "Suspicious"
+        
+#        if ps<=-0.3:
+#            if (-0.4)<ps<=(-0.3):
+#                score=30
+#            elif (-0.5)<ps<=(-0.4):
+#                score=40 
+#            elif (-0.6)<ps<=(-0.5):
+#                score=50 
+#            elif (-0.7)<ps<=(-0.6):
+#                score=60 
+#            elif (-0.8)<ps<=(-0.7):
+#                score=70
+#            elif (-0.9)<=ps<=(-0.8):
+#                score=80  
+#            elif (-1)<=ps<=(-0.9):
+#                score=90 
+        
+        
+#       st.write(ps)
 
         if final_prediction == "Safe":
             st.success("This website is safe!")
@@ -250,6 +300,8 @@ if nav == "Prediction":
 
 
 if nav == "About Us":
+    hide_st_style = """ <style>#MainMenu {visibility: hidden;}footer {visibility: hidden;} header {visibility: hidden;}</style>"""
+    st.markdown(hide_st_style, unsafe_allow_html=True)
     st.header("About Us")
-    st.write("We are ML enthusiasts here to serve and protect our citizens from being phished.")
+    st.write("Kingphishers is a dynamic team of six talented students who have harnessed their collective expertise to create a cutting-edge phishing website detector. With a shared passion for cybersecurity and a commitment to protecting individuals and organizations from online threats, our team has worked tirelessly to develop a sophisticated tool that identifies and safeguards against phishing scams. Through collaboration, innovation, and a dedication to staying one step ahead of cybercriminals, Kingphishers is on a mission to make the digital world a safer place for everyone.")
     st.write("This is our submission for the Smart India Hackathon 2023.")
