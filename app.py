@@ -226,7 +226,7 @@ st.title("Phishing Predictor")
 st.write("Detect suspicious websites to stay safe online")
 nav = st.sidebar.radio("Navigation", ["Home", "Prediction", "About Us"])
 if nav == "Home":
-    # Display an image and welcome message
+
     st.image("phisher.jpg", width=800)
     st.write("Welcome to our phishing detection tool, created by The KingPhishers!")
     hide_st_style = """ <style>#MainMenu {visibility: hidden;}footer {visibility: hidden;} header {visibility: hidden;}</style>"""
@@ -240,7 +240,7 @@ if nav == "Prediction":
     input_url = st.text_input("Enter the URL to check for phishing")
 
     if st.button("Check"):
-        st.info("Checking... Please wait")  # Provide feedback while checking
+        st.info("Checking... Please wait") 
 
         safe=False
         for site in top_safe_site:
@@ -250,13 +250,11 @@ if nav == "Prediction":
 
         if safe:
             final_prediction="Safe"
-#            ps=1
         else:
             features = analyze_website(input_url)
             are_all_minus_1 = all(x == -1 for x in features)
             if are_all_minus_1:
                 final_prediction=""
-#               ps=''
             else:
                 weight_classifier = 0.7 
                 weight_pipeline_ls = 0.3 
@@ -265,31 +263,11 @@ if nav == "Prediction":
                 pred_pipeline_ls = pipeline_ls.predict([input_url])
                 weighted_average_pred = (weight_classifier * int(pred_classifier[0]) + weight_pipeline_ls * int(pred_pipeline_ls[0])) / (weight_classifier + weight_pipeline_ls)
                 threshold = -0.3
-#                ps=weighted_average_pred
         
                 if weighted_average_pred > threshold:
                     final_prediction = "Safe"
                 else:
                     final_prediction = "Suspicious"
-        
-#        if ps<=-0.3:
-#            if (-0.4)<ps<=(-0.3):
-#                score=30
-#            elif (-0.5)<ps<=(-0.4):
-#                score=40 
-#            elif (-0.6)<ps<=(-0.5):
-#                score=50 
-#            elif (-0.7)<ps<=(-0.6):
-#                score=60 
-#            elif (-0.8)<ps<=(-0.7):
-#                score=70
-#            elif (-0.9)<=ps<=(-0.8):
-#                score=80  
-#            elif (-1)<=ps<=(-0.9):
-#                score=90 
-        
-        
-#       st.write(ps)
 
         if final_prediction == "Safe":
             st.success("This website is safe!")
