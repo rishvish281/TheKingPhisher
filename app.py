@@ -41,8 +41,6 @@ def preprocess_dataset(X, y):
     # Determine the size of the majority class
     max_class_size = max(len(X_positive), len(X_negative))
 
-
-
 # Upsample each class to match the size of the majority class
     if len(X_positive) < max_class_size:
         indices = np.random.choice(len(X_positive), max_class_size, replace=True)
@@ -59,7 +57,7 @@ def preprocess_dataset(X, y):
     return X_balanced, y_balanced
 
 
-st.set_page_config(page_title="Phishing Predictor", page_icon=":shield:")
+st.set_page_config(page_title="Phishing Detector", page_icon=":shield:")
 
 @st.cache_resource
 def load_model():
@@ -222,9 +220,9 @@ def analyze_website(url):
         return [-1] * 7  # Return -1 for all features if an exception occurs
 
 
-st.title("Phishing Predictor")
+st.title("Phishing Detector")
 st.write("Detect suspicious websites to stay safe online")
-nav = st.sidebar.radio("Navigation", ["Home", "Prediction", "About Us"])
+nav = st.sidebar.radio("Navigation", ["Home", "Detection", "About Us"])
 if nav == "Home":
 
     st.image("phisher.jpg", width=800)
@@ -232,8 +230,8 @@ if nav == "Home":
     hide_st_style = """ <style>#MainMenu {visibility: hidden;}footer {visibility: hidden;} header {visibility: hidden;}</style>"""
     st.markdown(hide_st_style, unsafe_allow_html=True)
     
-if nav == "Prediction":
-    st.header("Website URL Prediction")
+if nav == "Detection":
+    st.header("Website URL Detection")
     hide_st_style = """ <style>#MainMenu {visibility: hidden;}footer {visibility: hidden;} header {visibility: hidden;}</style>"""
     st.markdown(hide_st_style, unsafe_allow_html=True)   
 
@@ -268,11 +266,16 @@ if nav == "Prediction":
                     final_prediction = "Safe"
                 else:
                     final_prediction = "Suspicious"
+                    no_1=sum(1 for ft in features if ft==1)
+                    score=(no_1/7)*100
+                    score=round(score,2)
+
 
         if final_prediction == "Safe":
             st.success("This website is safe!")
         elif final_prediction == "Suspicious":
             st.warning("This website is suspicious!")
+            st.write("The given suspicious website scores "+str(score)+"% in its similarity to genuine domains")
         else:
             st.error("Error: Request Failed | Unable to make a prediction | Please enter valid URL")
 
